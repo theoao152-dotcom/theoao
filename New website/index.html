@@ -1,0 +1,1337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Online Accounting Office</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Global Styles */
+        :root {
+            --yellow: #FFC107;
+            --black: #212121;
+            --white: #FFFFFF;
+            --gray: #F5F5F5;
+            --dark-gray: #757575;
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        html {
+            scroll-behavior: smooth;
+        }
+        
+        body {
+            background-color: var(--white);
+            color: var(--black);
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        /* Improved Page Turn Effect Styles */
+        .page-turn-container {
+            position: relative;
+            min-height: 100vh;
+            perspective: 3000px;
+            overflow: hidden;
+        }
+        
+        .page {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--white);
+            overflow-y: auto;
+            overflow-x: hidden;
+            transform-origin: left center;
+            transition: transform 0.8s cubic-bezier(0.645, 0.045, 0.355, 1);
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.15);
+            z-index: 1;
+            backface-visibility: hidden;
+        }
+        
+        .page.active {
+            z-index: 2;
+            transform: rotateY(0deg);
+        }
+        
+        .page.previous {
+            transform: rotateY(-180deg);
+            z-index: 1;
+        }
+        
+        .page.next {
+            transform: rotateY(180deg);
+            z-index: 0;
+        }
+        
+        /* Page turning animation classes */
+        @keyframes pageTurnOut {
+            0% {
+                transform: rotateY(0deg);
+                opacity: 1;
+            }
+            50% {
+                transform: rotateY(-90deg);
+                opacity: 0.7;
+            }
+            100% {
+                transform: rotateY(-180deg);
+                opacity: 0.5;
+            }
+        }
+        
+        @keyframes pageTurnIn {
+            0% {
+                transform: rotateY(180deg);
+                opacity: 0.5;
+            }
+            50% {
+                transform: rotateY(90deg);
+                opacity: 0.7;
+            }
+            100% {
+                transform: rotateY(0deg);
+                opacity: 1;
+            }
+        }
+        
+        .page.turning-out {
+            animation: pageTurnOut 0.8s cubic-bezier(0.645, 0.045, 0.355, 1) forwards;
+        }
+        
+        .page.turning-in {
+            animation: pageTurnIn 0.8s cubic-bezier(0.645, 0.045, 0.355, 1) forwards;
+        }
+        
+        /* Add page curl effect on the edge */
+        .page::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 20px;
+            height: 100%;
+            background: linear-gradient(to left, 
+                rgba(0,0,0,0.1) 0%, 
+                rgba(0,0,0,0.05) 70%, 
+                transparent 100%);
+            pointer-events: none;
+            z-index: 10;
+            opacity: 0.5;
+            transition: opacity 0.3s;
+        }
+        
+        .page.active::before {
+            opacity: 1;
+        }
+        
+        /* Add shadow depth during turn */
+        .page.turning-out {
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .page.turning-in {
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        /* Navigation Styles */
+        header {
+            background-color: var(--black);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+        }
+        
+        .logo {
+            color: var(--yellow);
+            font-size: 1.8rem;
+            font-weight: 700;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+        }
+        
+        .logo i {
+            margin-right: 10px;
+            font-size: 2rem;
+        }
+        
+        .nav-links {
+            display: flex;
+            list-style: none;
+        }
+        
+        .nav-links li {
+            margin-left: 30px;
+        }
+        
+        .nav-links a {
+            color: var(--white);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.1rem;
+            transition: color 0.3s;
+            position: relative;
+        }
+        
+        .nav-links a:hover {
+            color: var(--yellow);
+        }
+        
+        .nav-links a::after {
+            content: '';
+            position: absolute;
+            width: 0;
+            height: 3px;
+            background: var(--yellow);
+            left: 0;
+            bottom: -5px;
+            transition: width 0.3s;
+        }
+        
+        .nav-links a:hover::after {
+            width: 100%;
+        }
+        
+        .menu-toggle {
+            display: none;
+            color: var(--white);
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+        
+        /* Page Navigation Buttons */
+        .page-nav {
+            position: fixed;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .page-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background-color: var(--yellow);
+            color: var(--black);
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .page-btn:hover {
+            background-color: var(--black);
+            color: var(--yellow);
+            transform: scale(1.1);
+        }
+        
+        .page-btn.active-page {
+            background-color: var(--black);
+            color: var(--yellow);
+        }
+        
+        /* Section Styles */
+        section {
+            padding: 100px 0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        
+        .section-title {
+            text-align: center;
+            margin-bottom: 60px;
+            position: relative;
+        }
+        
+        .section-title h2 {
+            font-size: 2.5rem;
+            color: var(--black);
+            display: inline-block;
+            padding-bottom: 10px;
+        }
+        
+        .section-title h2::after {
+            content: '';
+            position: absolute;
+            width: 70px;
+            height: 4px;
+            background: var(--yellow);
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+        }
+        
+        /* Home Section */
+        #home {
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1554224155-6726b3ff858f?ixlib=rb-1.2.1&auto=format&fit=crop&w=1200&q=80');
+            background-size: cover;
+            background-position: center;
+            color: var(--white);
+            text-align: center;
+        }
+        
+        .home-content h1 {
+            font-size: 3.5rem;
+            margin-bottom: 20px;
+            color: var(--yellow);
+        }
+        
+        .home-content .tagline {
+            font-size: 1.8rem;
+            margin-bottom: 30px;
+            font-weight: 300;
+        }
+        
+        .home-content p {
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin: 0 auto 40px;
+        }
+        
+        .highlight {
+            background-color: var(--yellow);
+            color: var(--black);
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: 700;
+            font-size: 1.3rem;
+            display: inline-block;
+            margin-top: 20px;
+        }
+        
+        /* About Section */
+        #about {
+            background-color: var(--gray);
+        }
+        
+        .about-content {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 40px;
+        }
+        
+        .about-text {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .about-text h3 {
+            font-size: 2rem;
+            margin-bottom: 20px;
+            color: var(--black);
+        }
+        
+        .about-text p {
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+        }
+        
+        .about-image {
+            flex: 1;
+            min-width: 300px;
+        }
+        
+        .about-image img {
+            width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+        }
+        
+        /* Services Section */
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 30px;
+            margin-top: 40px;
+        }
+        
+        .service-card {
+            background-color: var(--white);
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s, box-shadow 0.3s;
+            border-top: 5px solid var(--yellow);
+        }
+        
+        .service-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.15);
+        }
+        
+        .service-icon {
+            font-size: 2.5rem;
+            color: var(--yellow);
+            margin-bottom: 20px;
+        }
+        
+        .service-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 15px;
+            color: var(--black);
+        }
+        
+        .service-card ul {
+            list-style-position: inside;
+            margin-left: 10px;
+        }
+        
+        .service-card li {
+            margin-bottom: 8px;
+            color: var(--dark-gray);
+        }
+        
+        /* Team Section */
+        #team {
+            background-color: var(--gray);
+        }
+        
+        .team-members {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 40px;
+            margin-top: 40px;
+        }
+        
+        .team-card {
+            background-color: var(--white);
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            max-width: 350px;
+            transition: transform 0.3s;
+        }
+        
+        .team-card:hover {
+            transform: translateY(-10px);
+        }
+        
+        .team-icon {
+            height: 200px;
+            background-color: var(--yellow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--black);
+            font-size: 6rem;
+        }
+        
+        .team-info {
+            padding: 25px;
+        }
+        
+        .team-info h3 {
+            font-size: 1.5rem;
+            margin-bottom: 5px;
+            color: var(--black);
+        }
+        
+        .team-info .position {
+            color: var(--yellow);
+            font-weight: 600;
+            margin-bottom: 15px;
+            display: block;
+        }
+        
+        .team-info p {
+            color: var(--dark-gray);
+            margin-bottom: 15px;
+        }
+        
+        /* Contact Section - Updated */
+        #contact {
+            background-color: var(--white);
+        }
+        
+        .contact-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 40px;
+            margin-top: 40px;
+        }
+        
+        .contact-card {
+            background-color: var(--gray);
+            border-radius: 10px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s;
+            border-left: 5px solid var(--yellow);
+        }
+        
+        .contact-card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .contact-card h3 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: var(--black);
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 25px;
+        }
+        
+        .contact-icon {
+            background-color: var(--yellow);
+            color: var(--black);
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+        
+        .contact-details h4 {
+            font-size: 1.2rem;
+            margin-bottom: 5px;
+        }
+        
+        .contact-details p {
+            color: var(--dark-gray);
+            line-height: 1.5;
+        }
+        
+        .business-hours {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid rgba(0, 0, 0, 0.1);
+        }
+        
+        .business-hours h4 {
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            color: var(--black);
+        }
+        
+        .hours-list {
+            list-style: none;
+        }
+        
+        .hours-list li {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            color: var(--dark-gray);
+        }
+        
+        .btn {
+            background-color: var(--yellow);
+            color: var(--black);
+            border: none;
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s, transform 0.3s;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .btn:hover {
+            background-color: #FFB300;
+            transform: translateY(-3px);
+        }
+        
+        /* Footer */
+        footer {
+            background-color: var(--black);
+            color: var(--white);
+            padding: 40px 0 20px;
+            text-align: center;
+        }
+        
+        .footer-content {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-bottom: 30px;
+        }
+        
+        .footer-section {
+            flex: 1;
+            min-width: 250px;
+            margin-bottom: 30px;
+        }
+        
+        .footer-section h3 {
+            color: var(--yellow);
+            margin-bottom: 20px;
+            font-size: 1.3rem;
+        }
+        
+        .footer-links {
+            list-style: none;
+        }
+        
+        .footer-links li {
+            margin-bottom: 10px;
+        }
+        
+        .footer-links a {
+            color: var(--white);
+            text-decoration: none;
+            transition: color 0.3s;
+        }
+        
+        .footer-links a:hover {
+            color: var(--yellow);
+        }
+        
+        .copyright {
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 0.9rem;
+            color: var(--dark-gray);
+        }
+        
+        /* Page Navigation Controls */
+        .page-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 50px;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        /* Responsive Styles */
+        @media (max-width: 1200px) {
+            .page-nav {
+                right: 15px;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .home-content h1 {
+                font-size: 2.8rem;
+            }
+            
+            .home-content .tagline {
+                font-size: 1.5rem;
+            }
+            
+            .page-nav {
+                display: none;
+            }
+            
+            .contact-container {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .menu-toggle {
+                display: block;
+            }
+            
+            .nav-links {
+                position: fixed;
+                top: 70px;
+                left: 0;
+                background-color: var(--black);
+                width: 100%;
+                flex-direction: column;
+                align-items: center;
+                padding: 20px 0;
+                clip-path: polygon(0 0, 100% 0, 100% 0, 0 0);
+                transition: clip-path 0.4s ease;
+            }
+            
+            .nav-links.active {
+                clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%);
+            }
+            
+            .nav-links li {
+                margin: 15px 0;
+            }
+            
+            .home-content h1 {
+                font-size: 2.2rem;
+            }
+            
+            .section-title h2 {
+                font-size: 2rem;
+            }
+            
+            section {
+                padding: 80px 0;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .home-content h1 {
+                font-size: 1.8rem;
+            }
+            
+            .home-content .tagline {
+                font-size: 1.2rem;
+            }
+            
+            .highlight {
+                font-size: 1.1rem;
+            }
+            
+            .section-title h2 {
+                font-size: 1.8rem;
+            }
+            
+            .contact-card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Page Navigation Buttons -->
+    <div class="page-nav">
+        <button class="page-btn active-page" data-page="0"><i class="fas fa-home"></i></button>
+        <button class="page-btn" data-page="1"><i class="fas fa-info-circle"></i></button>
+        <button class="page-btn" data-page="2"><i class="fas fa-cogs"></i></button>
+        <button class="page-btn" data-page="3"><i class="fas fa-users"></i></button>
+        <button class="page-btn" data-page="4"><i class="fas fa-envelope"></i></button>
+    </div>
+    
+    <!-- Page Turn Container -->
+    <div class="page-turn-container" id="pageTurnContainer">
+        <!-- Home Page -->
+        <div class="page active" id="page0">
+            <!-- Header & Navigation -->
+            <header>
+                <div class="container">
+                    <nav>
+                        <a href="#" class="logo" data-page="0">
+                            <i class="fas fa-calculator"></i> The Online Accounting Office
+                        </a>
+                        
+                        <div class="menu-toggle" id="menuToggle">
+                            <i class="fas fa-bars"></i>
+                        </div>
+                        
+                        <ul class="nav-links" id="navLinks">
+                            <li><a href="#" data-page="0">Home</a></li>
+                            <li><a href="#" data-page="1">About Us</a></li>
+                            <li><a href="#" data-page="2">Services</a></li>
+                            <li><a href="#" data-page="3">Our Team</a></li>
+                            <li><a href="#" data-page="4">Contact</a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </header>
+            
+            <!-- Home Section -->
+            <section id="home">
+                <div class="container">
+                    <div class="home-content fade-in">
+                        <h1>OVER 15 YEARS EXPERIENCE</h1>
+                        <div class="tagline">TRUSTED ADVICE, ACCURATE RESULTS</div>
+                        <p>Your expert in providing cost-effective accounting solutions for your business, to improve processes, profitability and compliance.</p>
+                        <div class="highlight">PROFESSIONAL ACCOUNTING SERVICE</div>
+                        <div style="margin-top: 40px;">
+                            <button class="btn turn-page-btn" data-target="1">Learn More About Us <i class="fas fa-arrow-right"></i></button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <!-- About Page -->
+        <div class="page" id="page1">
+            <header>
+                <div class="container">
+                    <nav>
+                        <a href="#" class="logo" data-page="0">
+                            <i class="fas fa-calculator"></i> The Online Accounting Office
+                        </a>
+                        
+                        <div class="menu-toggle" id="menuToggle2">
+                            <i class="fas fa-bars"></i>
+                        </div>
+                        
+                        <ul class="nav-links" id="navLinks2">
+                            <li><a href="#" data-page="0">Home</a></li>
+                            <li><a href="#" data-page="1">About Us</a></li>
+                            <li><a href="#" data-page="2">Services</a></li>
+                            <li><a href="#" data-page="3">Our Team</a></li>
+                            <li><a href="#" data-page="4">Contact</a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </header>
+            
+            <!-- About Section -->
+            <section id="about">
+                <div class="container">
+                    <div class="section-title">
+                        <h2>About Us</h2>
+                    </div>
+                    
+                    <div class="about-content fade-in">
+                        <div class="about-text">
+                            <h3>Our Story</h3>
+                            <p>Founded in 2024, The Online Accounting Office brings together over 15 years of accounting expertise with modern digital solutions. We recognized the need for accessible, reliable accounting services that leverage technology to deliver exceptional value to businesses of all sizes.</p>
+                            <p>Our mission is to provide comprehensive accounting, tax, and consulting services through a seamless online platform, eliminating geographical barriers and simplifying financial management for our clients.</p>
+                            <p>Despite being newly established, our team brings decades of combined experience in chartered accounting, tax advisory, and financial consulting. We pride ourselves on staying at the forefront of accounting technology while maintaining the personal touch that builds lasting client relationships.</p>
+                            <p>We serve clients across South Africa and internationally, providing trusted advice and accurate results that drive business growth and financial compliance.</p>
+                            <div class="page-controls">
+                                <button class="btn turn-page-btn" data-target="0"><i class="fas fa-arrow-left"></i> Previous</button>
+                                <button class="btn turn-page-btn" data-target="2">Next <i class="fas fa-arrow-right"></i></button>
+                            </div>
+                        </div>
+                        <div class="about-image">
+                            <img src="https://images.unsplash.com/photo-1551836026-d5c2c5af78e4?ixlib=rb-1.2.1&auto=format&fit=crop&w=800&q=80" alt="Modern accounting office">
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <!-- Services Page -->
+        <div class="page" id="page2">
+            <header>
+                <div class="container">
+                    <nav>
+                        <a href="#" class="logo" data-page="0">
+                            <i class="fas fa-calculator"></i> The Online Accounting Office
+                        </a>
+                        
+                        <div class="menu-toggle" id="menuToggle3">
+                            <i class="fas fa-bars"></i>
+                        </div>
+                        
+                        <ul class="nav-links" id="navLinks3">
+                            <li><a href="#" data-page="0">Home</a></li>
+                            <li><a href="#" data-page="1">About Us</a></li>
+                            <li><a href="#" data-page="2">Services</a></li>
+                            <li><a href="#" data-page="3">Our Team</a></li>
+                            <li><a href="#" data-page="4">Contact</a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </header>
+            
+            <!-- Services Section -->
+            <section id="services">
+                <div class="container">
+                    <div class="section-title">
+                        <h2>Our Services</h2>
+                    </div>
+                    
+                    <div class="services-grid fade-in">
+                        <div class="service-card">
+                            <div class="service-icon">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <h3>Accounting & Bookkeeping</h3>
+                            <ul>
+                                <li>Monthly processing of source documentation</li>
+                                <li>Preparation of annual financial statements</li>
+                                <li>Staff training on accounting systems</li>
+                                <li>Bookkeeping to trial balance</li>
+                                <li>Cost reduction analysis</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="service-card">
+                            <div class="service-icon">
+                                <i class="fas fa-file-invoice-dollar"></i>
+                            </div>
+                            <h3>Tax Services</h3>
+                            <ul>
+                                <li>Income tax returns</li>
+                                <li>Employees tax - EMP201/EMP501</li>
+                                <li>Value Added Tax (VAT) - VAT201</li>
+                                <li>VAT/PAYE/Income tax registration</li>
+                                <li>Tax Clearance Certificate application</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="service-card">
+                            <div class="service-icon">
+                                <i class="fas fa-building"></i>
+                            </div>
+                            <h3>CIPC/Secretarial</h3>
+                            <ul>
+                                <li>Company registration</li>
+                                <li>Annual return submission</li>
+                                <li>BBBEE affidavit/certificate</li>
+                                <li>Company/Close corporation changes</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="service-card">
+                            <div class="service-icon">
+                                <i class="fas fa-chart-line"></i>
+                            </div>
+                            <h3>Financial Planning & Analysis</h3>
+                            <ul>
+                                <li>Budgeting</li>
+                                <li>Forecasting</li>
+                                <li>Management reports</li>
+                                <li>Financial statement analysis</li>
+                                <li>Variance analysis</li>
+                                <li>Cashflow management</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="page-controls">
+                        <button class="btn turn-page-btn" data-target="1"><i class="fas fa-arrow-left"></i> Previous</button>
+                        <button class="btn turn-page-btn" data-target="3">Next <i class="fas fa-arrow-right"></i></button>
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <!-- Team Page -->
+        <div class="page" id="page3">
+            <header>
+                <div class="container">
+                    <nav>
+                        <a href="#" class="logo" data-page="0">
+                            <i class="fas fa-calculator"></i> The Online Accounting Office
+                        </a>
+                        
+                        <div class="menu-toggle" id="menuToggle4">
+                            <i class="fas fa-bars"></i>
+                        </div>
+                        
+                        <ul class="nav-links" id="navLinks4">
+                            <li><a href="#" data-page="0">Home</a></li>
+                            <li><a href="#" data-page="1">About Us</a></li>
+                            <li><a href="#" data-page="2">Services</a></li>
+                            <li><a href="#" data-page="3">Our Team</a></li>
+                            <li><a href="#" data-page="4">Contact</a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </header>
+            
+            <!-- Team Section -->
+            <section id="team">
+                <div class="container">
+                    <div class="section-title">
+                        <h2>Our Team</h2>
+                    </div>
+                    
+                    <div class="team-members fade-in">
+                        <div class="team-card">
+                            <div class="team-icon">
+                                <i class="fas fa-user-tie"></i>
+                            </div>
+                            <div class="team-info">
+                                <h3>Denzil Muthusami</h3>
+                                <span class="position">Chartered Business Accountant/Tax Advisor</span>
+                                <p>BACC, CBAP(SA) with over 15 years of experience in accounting and tax advisory. Denzil specializes in providing cost-effective accounting solutions for businesses to improve processes, profitability, and compliance.</p>
+                                <p>His expertise spans financial statement preparation, tax planning, and business consulting across various industries.</p>
+                            </div>
+                        </div>
+                        
+                        <div class="team-card">
+                            <div class="team-icon">
+                                <i class="fas fa-user-cog"></i>
+                            </div>
+                            <div class="team-info">
+                                <h3>Yatin More</h3>
+                                <span class="position">Assistant Accountant & Client Services Manager</span>
+                                <p>Yatin brings 8 years of experience in accounting and client relationship management. He oversees day-to-day operations and ensures clients receive timely, accurate service.</p>
+                                <p>His areas of expertise include bookkeeping, payroll management, and CIPC compliance services, providing comprehensive support to our diverse client base.</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="page-controls">
+                        <button class="btn turn-page-btn" data-target="2"><i class="fas fa-arrow-left"></i> Previous</button>
+                        <button class="btn turn-page-btn" data-target="4">Next <i class="fas fa-arrow-right"></i></button>
+                    </div>
+                </div>
+            </section>
+        </div>
+        
+        <!-- Contact Page -->
+        <div class="page" id="page4">
+            <header>
+                <div class="container">
+                    <nav>
+                        <a href="#" class="logo" data-page="0">
+                            <i class="fas fa-calculator"></i> The Online Accounting Office
+                        </a>
+                        
+                        <div class="menu-toggle" id="menuToggle5">
+                            <i class="fas fa-bars"></i>
+                        </div>
+                        
+                        <ul class="nav-links" id="navLinks5">
+                            <li><a href="#" data-page="0">Home</a></li>
+                            <li><a href="#" data-page="1">About Us</a></li>
+                            <li><a href="#" data-page="2">Services</a></li>
+                            <li><a href="#" data-page="3">Our Team</a></li>
+                            <li><a href="#" data-page="4">Contact</a></li>
+                        </ul>
+                    </nav>
+                </div>
+            </header>
+            
+            <!-- Contact Section - Updated without form -->
+            <section id="contact">
+                <div class="container">
+                    <div class="section-title">
+                        <h2>Contact Us</h2>
+                    </div>
+                    
+                    <div class="contact-container fade-in">
+                        <div class="contact-card">
+                            <h3>Contact Information</h3>
+                            <div class="contact-item">
+                                <div class="contact-icon">
+                                    <i class="fas fa-phone-alt"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <h4>Phone</h4>
+                                    <p>060 704 9299</p>
+                                </div>
+                            </div>
+                            
+                            <div class="contact-item">
+                                <div class="contact-icon">
+                                    <i class="fas fa-envelope"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <h4>Email</h4>
+                                    <p>clientservices@theoao.co.za</p>
+                                </div>
+                            </div>
+                            
+                            <div class="contact-item">
+                                <div class="contact-icon">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <h4>Office Address</h4>
+                                    <p>Shop 4, Coronation Medical Centre<br>
+                                    38 Belvedere Drive, Watsonia<br>
+                                    Tongaat, 4399</p>
+                                </div>
+                            </div>
+                            
+                            <div class="contact-item">
+                                <div class="contact-icon">
+                                    <i class="fas fa-globe"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <h4>Website</h4>
+                                    <p>www.theoao.co.za</p>
+                                </div>
+                            </div>
+                            
+                            <div class="business-hours">
+                                <h4>Business Hours</h4>
+                                <ul class="hours-list">
+                                    <li><span>Monday - Friday:</span> <span>8:00 AM - 5:00 PM</span></li>
+                                    <li><span>Saturday:</span> <span>9:00 AM - 1:00 PM</span></li>
+                                    <li><span>Sunday:</span> <span>Closed</span></li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <div class="contact-card">
+                            <h3>Get In Touch</h3>
+                            <p style="margin-bottom: 20px;">Ready to streamline your accounting processes? Contact us today for a free consultation.</p>
+                            
+                            <div class="contact-item">
+                                <div class="contact-icon">
+                                    <i class="fas fa-comments"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <h4>Consultation</h4>
+                                    <p>Schedule a free 30-minute consultation to discuss your accounting needs.</p>
+                                </div>
+                            </div>
+                            
+                            <div class="contact-item">
+                                <div class="contact-icon">
+                                    <i class="fas fa-clock"></i>
+                                </div>
+                                <div class="contact-details">
+                                    <h4>Response Time</h4>
+                                    <p>We typically respond to all inquiries within 24 hours during business days.</p>
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 30px; text-align: center;">
+                                <a href="mailto:clientservices@theoao.co.za" class="btn"><i class="fas fa-envelope"></i> Email Us Now</a>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="page-controls">
+                        <button class="btn turn-page-btn" data-target="3"><i class="fas fa-arrow-left"></i> Previous</button>
+                        <button class="btn turn-page-btn" data-target="0">Back to Home <i class="fas fa-home"></i></button>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Footer -->
+            <footer>
+                <div class="container">
+                    <div class="footer-content">
+                        <div class="footer-section">
+                            <h3>The Online Accounting Office</h3>
+                            <p>Professional accounting, tax & consulting services with over 15 years of experience. Trusted advice, accurate results.</p>
+                        </div>
+                        
+                        <div class="footer-section">
+                            <h3>Quick Links</h3>
+                            <ul class="footer-links">
+                                <li><a href="#" data-page="0">Home</a></li>
+                                <li><a href="#" data-page="1">About Us</a></li>
+                                <li><a href="#" data-page="2">Services</a></li>
+                                <li><a href="#" data-page="3">Our Team</a></li>
+                                <li><a href="#" data-page="4">Contact</a></li>
+                            </ul>
+                        </div>
+                        
+                        <div class="footer-section">
+                            <h3>Services</h3>
+                            <ul class="footer-links">
+                                <li><a href="#" data-page="2">Accounting & Bookkeeping</a></li>
+                                <li><a href="#" data-page="2">Tax Services</a></li>
+                                <li><a href="#" data-page="2">CIPC/Secretarial</a></li>
+                                <li><a href="#" data-page="2">Financial Planning</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="copyright">
+                        <p>&copy; 2024 The Online Accounting Office. All rights reserved.</p>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+    
+    <script>
+       // Improved Page Turn System
+    const pages = document.querySelectorAll('.page');
+    const pageBtns = document.querySelectorAll('.page-btn');
+    const turnPageBtns = document.querySelectorAll('.turn-page-btn');
+    let currentPage = 0;
+    let isTurning = false;
+
+    // Initialize page turn system
+    function initPageTurn() {
+        // Set initial active page
+        setActivePage(currentPage);
+        
+        // Add click events to page navigation buttons
+        pageBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (isTurning) return;
+                const targetPage = parseInt(this.getAttribute('data-page'));
+                smoothTurnToPage(targetPage);
+            });
+        });
+        
+        // Add click events to turn page buttons
+        turnPageBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                if (isTurning) return;
+                const targetPage = parseInt(this.getAttribute('data-target'));
+                smoothTurnToPage(targetPage);
+            });
+        });
+        
+        // Add click events to navigation links
+        document.querySelectorAll('.nav-links a').forEach(link => {
+            link.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (isTurning) return;
+                const targetPage = parseInt(this.getAttribute('data-page'));
+                smoothTurnToPage(targetPage);
+                
+                // Close mobile menu if open
+                document.querySelectorAll('.nav-links').forEach(menu => {
+                    menu.classList.remove('active');
+                });
+            });
+        });
+    }
+
+    // Fixed: Smooth turn to specific page
+    function smoothTurnToPage(pageIndex) {
+        if (pageIndex === currentPage || isTurning) return;
+        
+        isTurning = true;
+        
+        // Get current and target pages
+        const currentPageElement = pages[currentPage];
+        const targetPageElement = pages[pageIndex];
+        
+        // Hide current page after animation starts
+        setTimeout(() => {
+            currentPageElement.classList.remove('active');
+            currentPageElement.classList.add('hidden');
+        }, 400);
+        
+        // Show target page with delay
+        setTimeout(() => {
+            targetPageElement.classList.remove('hidden');
+            targetPageElement.classList.add('active');
+        }, 400);
+        
+        // Add turning animations
+        currentPageElement.classList.add('turning-out');
+        targetPageElement.classList.add('turning-in');
+        
+        // Update current page
+        const previousPage = currentPage;
+        currentPage = pageIndex;
+        
+        // After turning animation completes
+        setTimeout(() => {
+            // Remove animation classes
+            pages.forEach(page => {
+                page.classList.remove('turning-out', 'turning-in');
+            });
+            
+            // Update page positions
+            updatePagePositions();
+            
+            // Update active state of navigation buttons
+            updatePageButtons();
+            
+            // Reset turning flag
+            isTurning = false;
+        }, 800);
+    }
+
+    // Set active page
+    function setActivePage(pageIndex) {
+        pages.forEach((page, index) => {
+            page.classList.remove('active', 'hidden', 'previous', 'next');
+            if (index === pageIndex) {
+                page.classList.add('active');
+            } else {
+                page.classList.add('hidden');
+            }
+        });
+        updatePageButtons();
+    }
+
+    // Update page positions
+    function updatePagePositions() {
+        pages.forEach((page, index) => {
+            if (index < currentPage) {
+                page.style.transform = 'rotateY(-180deg)';
+            } else if (index > currentPage) {
+                page.style.transform = 'rotateY(180deg)';
+            } else {
+                page.style.transform = 'rotateY(0deg)';
+            }
+        });
+    }
+
+    // Update page navigation buttons
+    function updatePageButtons() {
+        pageBtns.forEach((btn, index) => {
+            if (index === currentPage) {
+                btn.classList.add('active-page');
+            } else {
+                btn.classList.remove('active-page');
+            }
+        });
+    }
+
+    // Mobile Menu Toggle
+    const menuToggles = document.querySelectorAll('.menu-toggle');
+    
+    menuToggles.forEach(toggle => {
+        toggle.addEventListener('click', function() {
+            // Find the nav-links in the same page
+            const page = this.closest('.page');
+            const navLinks = page.querySelector('.nav-links');
+            navLinks.classList.toggle('active');
+        });
+    });
+    
+    // Close mobile menu when clicking a link
+    document.querySelectorAll('.nav-links a').forEach(link => {
+        link.addEventListener('click', () => {
+            const navLinks = link.closest('.nav-links');
+            navLinks.classList.remove('active');
+        });
+    });
+    
+    // Initialize the page turn system when DOM is loaded
+    document.addEventListener('DOMContentLoaded', initPageTurn);
+    
+    // Add scroll effect to headers
+    window.addEventListener('scroll', () => {
+        const headers = document.querySelectorAll('header');
+        headers.forEach(header => {
+            if (window.scrollY > 50) {
+                header.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.15)';
+            } else {
+                header.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+            }
+        });
+    });
+
+    </script>
+</body>
+</html>
